@@ -1,0 +1,15 @@
+The EXT2 Group Descriptor
+
+  Each Block Group has a data structure describing it. Like the Superblock, all the group descriptors for all of the Block Groups are duplicated in each Block Group in case of file system corruption.
+
+Each Group Descriptor contains the following information:
+
+Blocks Bitmap
+    The block number of the block allocation bitmap for this Block Group. This is used during block allocation and deallocation, 
+Inode Bitmap
+    The block number of the inode allocation bitmap for this Block Group. This is used during inode allocation and deallocation, 
+Inode Table
+    The block number of the starting block for the inode table for this Block Group. Each inode is represented by the EXT2 inode data structure described below. 
+Free blocks count, Free Inodes count, Used directory count
+
+The group descriptors are placed on after another and together they make the group descriptor table. Each Blocks Group contains the entire table of group descriptors after its copy of the Superblock. Only the first copy (in Block Group 0) is actually used by the EXT2 file system. The other copies are there, like the copies of the Superblock, in case the main copy is corrupted. 

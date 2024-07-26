@@ -1,0 +1,18 @@
+The EXT2 Inode
+
+Figure: EXT2 Inode
+
+    In the EXT2 file system, the inode is the basic building block; every file and directory in the file system is described by one and only one inode. The EXT2 inodes for each Block Group are kept in the inode table together with a bitmap that allows the system to keep track of allocated and unallocated inodes. Figure gif shows the format of an EXT2 inode, amongst other information, it contains the following fields:
+
+mode
+    This holds two pieces of information; what does this inode describe and the permissions that users have to it. For EXT2, an inode can describe one of file, directory, symbolic link, block device, character device or FIFO. 
+Owner Information
+    The user and group identifiers of the owners of this file or directory. This allows the file system to correctly allow the right sort of accesses, 
+Size
+    The size of the file in bytes, 
+Timestamps
+    The time that the inode was created and the last time that it was modified, 
+Datablocks
+    Pointers to the blocks that contain the data that this inode is describing. The first twelve are pointers to the physical blocks containing the data described by this inode and the last three pointers contain more and more levels of indirection. For example, the double indirect blocks pointer points at a block of pointers to blocks of pointers to data blocks. This means that files less than or equal to twelve data blocks in length are more quickly accessed than larger files.
+
+You should note that EXT2 inodes can describe special device files. These are not real files but handles that programs can use to access devices. All of the device files in /dev are there to allow programs to access Linux's devices. For example the mount  program takes the device file that it wishes to mount as an argument. 

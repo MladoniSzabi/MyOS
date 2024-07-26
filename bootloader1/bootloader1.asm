@@ -25,15 +25,17 @@
 	volumeLabel:       db    "NO NAME    "
 	fileSysType:       db    "FAT12   "
 
-bootloader_wait_8042_data:
+wait_8042_data:
   in al, 0x64
   test al, 0x1
-  jz bootloader_wait_8042_data
+  jz wait_8042_data
   ret
 
-bootloader_enable_a20_line:
+; the a20 line allows the computer to address up to 16MB of memory instead of 1MB
+; this is disabled by default to remain compatible with older processors and we need to enable it
+enable_a20_line:
 
- 	call bootloader_check_a20_line
+ 	call check_a20_line
 	cmp ax, 0x0
 	jne enable_a20_exit
 
@@ -41,51 +43,45 @@ bootloader_enable_a20_line:
   mov ax, 0x2401
   int 0x15
 
-  call bootloader_check_a20_line
+  call check_a20_line
   cmp ax, 0x0
   jne enable_a20_exit
 
   ;; method 2
   cli
 
-  call bootloader_wait_8042_data
+  call wait_8042_data
   mov al, 0xad
   out 0x64, al
 
-  call bootloader_wait_8042_data
+  call wait_8042_data
   mov al, 0xd0
   out 0x64, al
 
-  call bootloader_wait_8042_data
+  call wait_8042_data
   mov al, 0x60
   push eax
 
-  call bootloader_wait_8042_data
+  call wait_8042_data
   mov al, 0xd1
   out 0x64, al
 
-  call bootloader_wait_8042_data
+  call wait_8042_data
   pop eax
   or al, 2
   out 0x60, al
 
-  call bootloader_wait_8042_data
+  call wait_8042_data
   mov al, 0xae
   out 0x64, al
 
-  call bootloader_wait_8042_data
+  call wait_8042_data
 
   sti
 
-  call bootloader_check_a20_line
+  call check_a20_line
   cmp ax, 0x0
   jne enable_a20_exit
-
-  mov al, 0x50
-  mov ah, 0x0e
-  int 0x10
-
-  jmp $
 
   ;; method 3
   in al, 0x92
@@ -96,7 +92,11 @@ bootloader_enable_a20_line:
 enable_a20_exit:
   ret
 
-bootloader_check_a20_line:
+; to check whether the a20 line is enabled, we compare the value at 0x500
+; with the value 1MB above it. If the A20 line is disabled, the value 1MB
+; above, will wrap back around to 0x500.
+; returns 0 in ax if the line is disabled and 1 if it is enabled
+check_a20_line:
 
   push es
   push fs
@@ -111,13 +111,13 @@ bootloader_check_a20_line:
   mov fs,ax,
   mov si, 0x0510
 
-  mov al, [es:di]
+  mov al, [es:di]           ; es:di -> 0x0000:0x0500 -> 0x00000500
   push ax
 
-  mov al, [fs:si]
+  mov al, [fs:si]           ; fs:si -> 0xffff:0x0510 -> 0x00100500
   push ax
 
-  mov byte [es:di], 0x00
+  mov byte [es:di], 0x00    ; write different values to the two memory addresses
   mov byte [fs:si], 0xff
 
   cmp byte [es:di], 0xff
@@ -141,153 +141,98 @@ a20_exit:
 
   ret
 
-bootloader_do_nothing:
-  jmp $
-
-bootloader_print_char:
+; writes an excalmation mark to the screen
+bootloader_error:
+  mov al, '!'
   mov ah, 0x0e
   int 0x10
-  ret
-
-
-bootloader_error_2:
-  mov al, ah
-  add al, '0'
-  call bootloader_error
-bootloader_error_1:
-  add al, 'a'
-  call bootloader_error
-
-bootloader_error:
-  call bootloader_print_char
-  int 0x18
   jmp $
 
-bootloader_setup_gdt:
-  mov ax, 0x7ff0
-  mov es, ax
-  mov cx, gdt_end
-  sub cx, gdt_start
-  mov ax, 0
-loopdi_loop:
-  mov bx, gdt_start
-  add bx, ax
-  mov dx, [bx]
-  mov bx, ax
-  mov [es:bx], dx
-  add ax, 1
-  cmp ax, cx
-  jne loopdi_loop
+read_second_bootloader:
+  mov bx, 0x1000          ; destination of the second bootloader
+	mov ah, 0x02            ; sector on disk from which to start reading
+                          ; 0x01 is this bootloader and 0x02 is he second one
+	mov al, [num_sectors]   ; number of sectors to read
+	mov cl, 0x02            
+	mov ch, 0x00
+	int 0x13
+	jc bootloader_error     ; cf set if read failed
+	cmp al, [num_sectors]   ; al contains actual number of sectors read
+	jne bootloader_error
 
   ret
+
+; 0xe820 is a bios function that returns a memory map of the computer
+; this function asks the bios for a memory map and places it at adress 0x50d
+read_memory_map:
+  mov di, 0x50d   ; the address to store the memory map
+	xor ebx, ebx		; ebx must be 0 to start
+	xor bp, bp		; keep an entry count in bp
+	mov edx, 0x0534D4150	; Place "SMAP" into edx
+	mov eax, 0xe820
+	mov [es:di + 20], dword 1	; force a valid ACPI 3.X entry
+	mov ecx, 24		; ask for 24 bytes
+	int 0x15
+	jc short .failed	; carry set on first call means "unsupported function"
+	mov edx, 0x0534D4150	; Some BIOSes apparently trash this register?
+	cmp eax, edx		; on success, eax must have been reset to "SMAP"
+	jne short .failed
+	test ebx, ebx		; ebx = 0 implies list is only 1 entry long (worthless)
+	je short .failed
+	jmp short .jmpin
+.e820lp:
+	mov eax, 0xe820		; eax, ecx get trashed on every int 0x15 call
+	mov [es:di + 20], dword 1	; force a valid ACPI 3.X entry
+	mov ecx, 24		; ask for 24 bytes again
+	int 0x15
+	jc short .e820f		; carry set means "end of list already reached"
+	mov edx, 0x0534D4150	; repair potentially trashed register
+.jmpin:
+	jcxz .skipent		; skip any 0 length entries
+	cmp cl, 20		; got a 24 byte ACPI 3.X response?
+	jbe short .notext
+	test byte [es:di + 20], 1	; if so: is the "ignore this data" bit clear?
+	je short .skipent
+.notext:
+	mov ecx, [es:di + 8]	; get lower uint32_t of memory region length
+	or ecx, [es:di + 12]	; "or" it with upper uint32_t to test for zero
+	jz .skipent		; if length uint64_t is 0, skip entry
+	inc bp			; got a good entry: ++count, move to next storage spot
+	add di, 24
+.skipent:
+	test ebx, ebx		; if ebx resets to 0, list is complete
+	jne short .e820lp
+.e820f:
+	mov [0x505], bp	; store the entry count
+	clc			; there is "jc" on end of list to this point, so the carry must be cleared
+	ret
+.failed:
+	stc			; "function unsupported" error exit
+	ret
 
 bootloader_main:
   cli
-  xor ax, ax
-	mov ds, ax
+  xor ax, ax      ; set ax to 0
+	mov ds, ax      ; zero out all the segment registers
 	mov ss, ax
   mov es, ax
-	mov sp, 0x6fff
+	mov sp, 0x6fff  ; set the stack pointer
 
   sti
   cld
 
-  mov [0x500], dl
-
-  xor ax, ax
+  mov [0x504], dl
   int 0x13
 
+  call read_second_bootloader
 
-  mov ax, 0x0
-	mov ds, ax
-  mov es, ax
+	call enable_a20_line
+  call read_memory_map
 
-	mov bx, 0x800
-  mov ah, 0x02
-	mov al, [num_sectors]
-	mov cl, 0x02
-	mov ch, 0x00
-	int 0x13
-	jc bootloader_error_2
-	cmp al, [num_sectors]
-	jne bootloader_error_1
+to_bootloader_2:
+  jmp 0x1000
 
-  call bootloader_setup_gdt
-
-  mov ax, 0x0
-  mov es, ax
-  mov ax, 0
-  mov ds, ax
-  mov bx, 0
-
-	call bootloader_enable_a20_line
-
-  cli
-  lgdt [gdt_descriptor]
-  mov eax, cr0
-  or al, 1
-  mov cr0, eax
-
-  jmp clear_prefetch_queue
-  nop
-  nop
-
-clear_prefetch_queue:
-  mov ax, 0x18
-  mov ds, ax
-  mov es, ax
-  mov fs, ax
-  mov gs, ax
-  mov ss, ax
-  mov esp, 0x6fff
-
-  db 0x66
-  db 0xea
-  dd 0x800
-  dw 0x20
-
-disk_label:               db 0
-num_sectors:              db 5
-start_printing_from:      dw 0x0
-counter:                  db 0
-
-gdt_descriptor:
-  dw 40
-  dd 0x0007ff00
-
-gdt_start:
-  ;; Null descriptor
-  times 8 db 0
-  ;; 16 bit code segment
-	dw 0x0200
-	dw 0x0c00
-	db 0x00
-	db 0x9a
-	db 0xc0
-	db 0x00
-  ;; 16 bit data segment
-  dw 0x0f00
-  dw 0x0000
-  db 0x00
-  db 0x92
-  db 0x00
-  db 0x00
-	;; data segment
-	dw 0xffff
-	dw 0x0000
-	db 0x00
-	db 0x92
-	db 0xcf
-	db 0x00
-  ;; Code segment
-	dw 0x0c00
-	dw 0x0000
-	db 0x00
-	db 0x9a
-	db 0xc0
-	db 0x00
-gdt_end:
-
+num_sectors:              db 2
   times 510-($-$$)        db 0
                           db 0x55
                           db 0xAA

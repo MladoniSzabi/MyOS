@@ -1,162 +1,126 @@
-  [BITS 32]
-  [ORG 0x800]
+[ORG 0x1000]
 
-  counter equ 0x7e00
-  file_offset equ 0x7e02
-  kernel_entry_point equ 0x7e06
-  program_segment_count equ 0x7e0a
-  program_segment_data equ 0x7e10
+bootloader_main:
 
-bootloader2_main:
+ 	call read_os
+  call read_ternary_bootloader
+  call setup_gdt
 
+	; load global descriptor table
   cli
-  call terminal_initialise
-  call init_pic
-  call populate_idt
-  lidt [idt_descriptor]
-  sti
+	lgdt [gdt_descriptor]
+	mov eax, cr0
+	or al, 1
+	mov cr0, eax
 
-  call read_from_disk
+	jmp clear_prefetch_queue
+	nop
+	nop
+
+
+clear_prefetch_queue:
+; set up the segment registers
+	mov ax, 0x08
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+	mov ss, ax
+	mov esp, 0x6fff
+
+; jump to the ternary bootloader
+	db 0x66
+	db 0xea
+	dd 0x800
+	dw 0x10
 
   jmp $
 
-bootloader_msg: db "Hello, World!", 0
-
-read_from_disk:
-  cli
-  mov byte [ata_flag], 0x0
-  ;; select device
-  mov eax, 0                    ;slave bit (not sure what this means)
-  shr eax, 4
-  mov dx, 0x1f6
-  out dx, al
-
-  ;; enable dma
-  mov eax, 1
-  mov dx, 0x1f1
-  out dx, al
-
-  ;; set byte count
-  mov dx, 0x1f3
-  mov al, 0xa
-  out dx, al
-
-  ;; send packet command
-  mov eax, 0xa0
-  mov dx, 0x1f7
-  out dx, al
-
-  ;; wait till controller is ready (busy flag)
-  mov dx, 0x1f7
-read_from_disk_loopdi_loop1:
-  in al, dx
-  and al, 0b10000000
-  cmp al, 0b10000000
-  je read_from_disk_loopdi_loop1
-
-  ;; wait till controller is ready (DRQ flag)
-  mov dx, 0x1f7
-read_from_disk_loopdi_loop2:
-  in al, dx
-  and al, 0b00001000
-  cmp al, 0b00001000
-  jne read_from_disk_loopdi_loop2
-
-  ;; check for errors
-  in al, dx
-  and al, 1
-  cmp al, 1
-  jne read_from_disk_no_error
-  mov al, 0x45
-  call putchar
-  ret
-
-read_from_disk_no_error:
-
-  sti
-
-  mov al, 'a'
-  call putchar
-
-  jmp $
-
-  ;; send command
-  mov dx, 0x1f0
-  mov ebx, ata_read_cmd
-  mov ecx, 0
-read_from_disk_loopdi_loop3:
-  mov ax, [ebx]
-  ror ax, 8
-  out dx, ax
-  add ebx, 2
-  inc ecx
-  cmp ecx, 6
-  jne read_from_disk_loopdi_loop3
-
-  mov al, 'b'
-  call putchar
-
-  ;; wait for cmd to arrive (signalled with an interrupt)
-read_from_disk_loopdi_loop4:
-  cmp byte [ata_flag], 0x1
-  jne read_from_disk_loopdi_loop4
-
- 	mov al, 'c'
-  call putchar
-
-  mov dx, 0x1f7
-  in al, dx
-  and al, 1
-  add al, 0x41
-  call putchar
-
-  ;; read actual data sent
-  mov dx, 0x1f5
-  in al, dx
-  mov cl, al
-  mov dx, 0x1f4
-  in al, dx
-  mov ch, al
-
-  cmp ecx, 0
-  jne read_from_disk_jmp1
-  mov ecx, 0x20
-  jmp read_from_disk_loopdi_loop5
-
-read_from_disk_jmp1:
-  cmp ecx, 0xa
-  jle read_from_disk_loopdi_loop5
-  mov ecx, 0x20
-
-  mov al, cl
-  add al, 0x41
-  call putchar
-
-  ;; display data
-read_from_disk_loopdi_loop5:
-  mov dx, 0x1f0
-  in ax, dx
-  ror ax, 8
-  call putchar
-  ror ax, 8
-  call putchar
-
-  dec ecx
-  cmp ecx, 0x0
-  jne read_from_disk_loopdi_loop5
-
-  mov al, 'd'
-  call putchar
+read_ternary_bootloader:
+  mov bx, 0x800
+  mov ah, 0x02
+  mov al, [num_sectors]
+  mov cl, 0x04
+  mov ch, 0x00
+  mov dh, 0x0
+  mov dl, [0x500]
+  int 0x13
+  jc error
+	cmp al, [num_sectors]
+	jne error
 
   ret
 
+; read the ELF binary with the OS from disk
+read_os:
+	mov ax, 0x1000
+	mov es, ax
+	mov bx, 0x0
+	mov ah, 0x02
+	mov al, [num_os_sectors]
+	mov cl, 0x04
+	add cl, [num_sectors]
+	mov ch, 0x00
+  mov dh, 0x0
+	mov dl, [0x500]
+	int 0x13
+	jc error
+	cmp al, [num_os_sectors]
+	jne error
 
-ata_read_cmd: db 0xa8, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0
-disk_buffer:  times 10 db 0
+	xor ax,ax
+	mov es, ax
 
-  %include "string.asm"
-  %include "tty.asm"
-  %include "stdio.asm"
-  %include "isr.asm"
+	ret
 
-  	times 0xa00-($-$$)  db 0x0
+; print '?' to the screen
+error:
+	mov al, '?'
+	mov ah, 0x0e
+	int 0x10
+	jmp $
+
+setup_gdt:
+	mov ax, 0x7ff0
+	mov es, ax
+	mov cx, gdt_end
+	sub cx, gdt_start
+	mov ax, 0
+setup_gdt_loopdi_loop:
+	mov bx, gdt_start
+	add bx, ax
+	mov dx, [bx]
+	mov bx, ax
+	mov [es:bx], dx
+	add ax, 1
+	cmp ax, cx
+	jne	setup_gdt_loopdi_loop
+
+	ret
+
+num_os_sectors:           db 16
+num_sectors:  db 3
+gdt_start:
+	;; Null descriptor
+	times 8 db 0
+	;; data segment
+	dw 0xffff
+	dw 0x0000
+	db 0x00
+	db 0x92
+	db 0xcf
+	db 0x00
+	;; Code segment
+	dw 0x0c00
+	dw 0x0000
+	db 0x00
+	db 0x9a
+	db 0xc0
+	db 0x00
+gdt_end:
+
+gdt_descriptor:
+	dw 40
+	dd 0x0007ff00
+
+  times 0x400-($-$$) db 0

@@ -1,0 +1,16 @@
+EXT2 Directories
+
+Figure: EXT2 Directory
+
+In the EXT2 file system Directories are special files that are used to create and hold access paths to the files in the file system. Figure gif shows the layout of a directory entry in memory.
+
+A directory file is a list of directory entries, each one containing the following information:
+
+inode
+    The inode for this directory entry. This is an index into the array of inodes held in the Inode Table of the Block Group. In figure gif, the directory entry for the file called file has a reference to inode number i1, 
+name length
+    The length of this directory entry in bytes, 
+name
+    The name of this directory entry.
+
+The first two entries for every directory are always the standard ``.'' and ``..'' entries meaning ``this directory'' and ``the parent directory'' respectively. 

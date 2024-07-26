@@ -1,0 +1,22 @@
+The EXT2 Superblock
+
+  The Superblock contains a description of the basic size and shape of this file system. The information within it allows the file system manager to use and maintain the file system. Usually only the Superblock in Block Group 0 is read when the file system is mounted but each Block Group contains a duplicate copy in case of file system corruption. Amongst other information it holds the:
+
+Magic Number
+    This allows the mounting software to check that this is indeed the Superblock for an EXT2 file system. For the current version of EXT2 this is 0xEF53. 
+Revision Level
+    The major and minor revision levels allow the mounting code to determine whether or not this file system supports features that are only available in particular revisions of the file system. There are also feature compatibility fields which help the mounting code to determine which new features can safely be used on this file system, 
+Mount Count and Maximum Mount Count
+    Together these allow the system to determine if the file system should be fully checked. The mount count is incremented each time the file system is mounted and when it equals the maximum mount count the warning message ``maximal mount count reached, running e2fsck is recommended'' is displayed, 
+Block Group Number
+    The Block Group number that holds this copy of the Superblock, 
+Block Size
+    The size of the block for this file system in bytes, for example 1024 bytes, 
+Blocks per Group
+    The number of blocks in a group. Like the block size this is fixed when the file system is created, 
+Free Blocks
+    The number of free blocks in the file system, 
+Free Inodes
+    The number of free Inodes in the file system, 
+First Inode
+    This is the inode number of the first inode in the file system. The first inode in an EXT2 root file system would be the directory entry for the '/' directory. 
