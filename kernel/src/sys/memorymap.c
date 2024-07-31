@@ -29,8 +29,8 @@ struct MemoryMapEntry *get_free_memory_block()
 	struct MemoryMapEntry *block = memorymap_pos;
 	for (int i = 0; i < total_memory_map_entries; i++)
 	{
-		if (block->flags == 0)
-			return block;
+		if (block[i].flags == 0)
+			return (block + i);
 	}
 	return 0;
 }
@@ -49,6 +49,17 @@ void reserve_kernel_memory(uint64_t start_pos, uint64_t size, uint64_t flags)
 	// we are inside an existing block so modify it
 	if ((curr->start + curr->size) < start_pos)
 	{
+		println();
+		printhex_digits(curr->start, 64);
+		println();
+		printhex_digits(curr->size, 64);
+		println();
+		printhex_digits((uint32_t)curr->next, 64);
+		println();
+		printhex_digits(start_pos, 64);
+		println();
+		printhex_digits(size, 64);
+		println();
 		kernel_panic("Trying to allocate memory that is not available");
 	}
 	struct MemoryMapEntry *new_entry = get_free_memory_block();
@@ -233,18 +244,20 @@ void initialise_memory_manager()
 	// TODO: Place memory map in a free block and make sure enough there is enough space for 100 entries
 
 	/// Spaces not to use:
-	///  0x0 -> 0x500 BIOS stuff i think?
+	///  0x0 -> 0x100 BIOS stuff i think?
+	///  0x100 -> 0x404 stack
 	///  0x100000 -> size of kernel, because it is reserved by our kernel
 	///  0x800 -> initial size of memory map, because it is used by the memory map
 
 	unsigned int size_of_kernel = *((unsigned int *)0x500);
 
-	reserve_kernel_memory(0, 0x500, MEMORY_RESERVED);
+	reserve_kernel_memory(0, 0x100, MEMORY_RESERVED);
+	reserve_kernel_memory(0x100, 0x304, MEMORY_READABLE | MEMORY_WRITEABLE);
 	reserve_kernel_memory(0x800, sizeof(struct MemoryMapEntry) * total_memory_map_entries, MEMORY_WRITEABLE | MEMORY_READABLE);
 	reserve_kernel_memory(0x100000, size_of_kernel, MEMORY_EXECUTABLE);
 
-	debug_check_memory_map();
-	println();
+	// debug_check_memory_map();
+	// println();
 }
 
 void deallocate_memory_map_entry(struct MemoryMapEntry *entry)
@@ -260,10 +273,10 @@ struct MemoryMapEntry *allocate_memory_map_entry()
 		struct MemoryMapEntry *current = memorymap_pos;
 		while (current != 0)
 		{
-			if (current->flags | MEMORY_FREE != 0 && current->size >= (new_count * sizeof(struct MemoryMapEntry)))
+			if (current->flags | MEMORY_FREE != 0 && current->size >= (new_count * sizeof(struct MemoryMapEntry)) && current->start < 0xffffffff)
 			{
-				memcpy(current->start, memorymap_pos, total_memory_map_entries * sizeof(struct MemoryMapEntry));
-				struct MemoryMapEntry *entry = current->start;
+				memcpy((void *)current->start, (void *)memorymap_pos, total_memory_map_entries * sizeof(struct MemoryMapEntry));
+				struct MemoryMapEntry *entry = (struct MemoryMapEntry *)current->start;
 				for (int i = total_memory_map_entries; i < new_count; i++)
 				{
 					entry[i].flags = 0;
@@ -271,7 +284,7 @@ struct MemoryMapEntry *allocate_memory_map_entry()
 				deallocate_memory_map_entry(memorymap_pos);
 				total_memory_map_entries = new_count;
 				reserve_kernel_memory(current->start, new_count * sizeof(struct MemoryMapEntry), MEMORY_WRITEABLE | MEMORY_READABLE);
-				memorymap_pos = current->start;
+				memorymap_pos = (struct MemoryMapEntry *)current->start;
 			}
 		}
 		if (current == 0)
@@ -295,7 +308,7 @@ void *allocate_memory(unsigned int size, pid_t owner, enum MEMORY_FLAGS flags)
 	struct MemoryMapEntry *current = memorymap_pos;
 	while (current != 0)
 	{
-		if (current->flags == MEMORY_FREE && current->size > size)
+		if (current->flags == MEMORY_FREE && current->size > size && current->start < 0xffffffff)
 			break;
 		current = current->next;
 	}
@@ -309,7 +322,7 @@ void *allocate_memory(unsigned int size, pid_t owner, enum MEMORY_FLAGS flags)
 	mm_entry->next = current;
 	current->start += size;
 	current->size -= size;
-	return mm_entry->start;
+	return (void *)mm_entry->start;
 }
 
 void deallocate_memory(void *mem)

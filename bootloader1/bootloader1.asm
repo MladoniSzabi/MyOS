@@ -150,10 +150,10 @@ bootloader_error:
 
 read_second_bootloader:
   mov bx, 0x1000          ; destination of the second bootloader
-	mov ah, 0x02            ; sector on disk from which to start reading
-                          ; 0x01 is this bootloader and 0x02 is he second one
+	mov ah, 0x02            
 	mov al, [num_sectors]   ; number of sectors to read
-	mov cl, 0x02            
+	mov cl, 0x02            ; sector on disk from which to start reading
+                          ; 0x01 is this bootloader and 0x02 is he second one
 	mov ch, 0x00
 	int 0x13
 	jc bootloader_error     ; cf set if read failed

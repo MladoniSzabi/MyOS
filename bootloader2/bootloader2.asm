@@ -1,9 +1,8 @@
 [ORG 0x1000]
 
 bootloader_main:
-
+	call read_ternary_bootloader
  	call read_os
-  call read_ternary_bootloader
   call setup_gdt
 
 	; load global descriptor table
@@ -31,21 +30,23 @@ clear_prefetch_queue:
 ; jump to the ternary bootloader
 	db 0x66
 	db 0xea
-	dd 0x800
+	dd 0x7C00
 	dw 0x10
 
   jmp $
 
 read_ternary_bootloader:
-  mov bx, 0x800
+  mov bx, 0x7C00
   mov ah, 0x02
   mov al, [num_sectors]
   mov cl, 0x04
   mov ch, 0x00
   mov dh, 0x0
-  mov dl, [0x500]
+  mov dl, [0x504]
   int 0x13
+
   jc error
+
 	cmp al, [num_sectors]
 	jne error
 
@@ -53,16 +54,18 @@ read_ternary_bootloader:
 
 ; read the ELF binary with the OS from disk
 read_os:
+	xor ax, ax
+	mov di, ax
 	mov ax, 0x1000
 	mov es, ax
-	mov bx, 0x0
+	mov bx, 0
 	mov ah, 0x02
 	mov al, [num_os_sectors]
 	mov cl, 0x04
 	add cl, [num_sectors]
 	mov ch, 0x00
-  mov dh, 0x0
-	mov dl, [0x500]
+  	mov dh, 0x0
+	mov dl, [0x504]
 	int 0x13
 	jc error
 	cmp al, [num_os_sectors]
@@ -73,8 +76,9 @@ read_os:
 
 	ret
 
-; print '?' to the screen
+; print '?' to the screen and hang
 error:
+	xor bx, bx
 	mov al, '?'
 	mov ah, 0x0e
 	int 0x10
@@ -98,8 +102,8 @@ setup_gdt_loopdi_loop:
 
 	ret
 
-num_os_sectors:           db 16
-num_sectors:  db 3
+num_os_sectors:           db 23
+num_sectors:  db 5
 gdt_start:
 	;; Null descriptor
 	times 8 db 0

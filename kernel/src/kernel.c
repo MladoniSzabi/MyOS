@@ -1,5 +1,6 @@
 #include <sys/tty.h>
 #include <sys/memorymap.h>
+#include <sys/interrupts.h>
 
 /* Check if the compiler thinks you are targeting the wrong operating system. */
 #if defined(__linux__)
@@ -15,4 +16,5 @@ void kernel_main(void)
 {
 	terminal_initialise();
 	initialise_memory_manager();
+	enable_interrupts(123);
 }
