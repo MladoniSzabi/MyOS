@@ -72,7 +72,7 @@ ICW4_8086 equ 0x01
 ICW4_AUTO equ 0x02
 ICW4_BUF_SLAVE equ 0x08
 ICW4_BUF_MASTER equ 0x0c
-ICW4_SFNM 0x10
+ICW4_SFNM equ 0x10
 
 
 mask_pic1: db 0
@@ -117,6 +117,8 @@ reprogram_pic:
     out pic1_data, al
     mov al, [mask_pic2]
     out pic2_data, al
+
+    pop eax
 
     ret
 

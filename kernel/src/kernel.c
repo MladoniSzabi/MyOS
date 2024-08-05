@@ -1,6 +1,7 @@
 #include <sys/tty.h>
 #include <sys/memorymap.h>
 #include <sys/interrupts.h>
+#include <sys/acpi.h>
 
 /* Check if the compiler thinks you are targeting the wrong operating system. */
 #if defined(__linux__)
@@ -12,9 +13,12 @@
 #error "ix86-elf compiler needed"
 #endif
 
+#include "sys/debug.h"
+
 void kernel_main(void)
 {
 	terminal_initialise();
 	initialise_memory_manager();
-	enable_interrupts(123);
+	findRSDT();
+	enable_interrupts();
 }
