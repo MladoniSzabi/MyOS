@@ -2,6 +2,7 @@
 #include <sys/memorymap.h>
 #include <sys/interrupts.h>
 #include <sys/acpi.h>
+#include <sys/ps2.h>
 
 /* Check if the compiler thinks you are targeting the wrong operating system. */
 #if defined(__linux__)
@@ -21,4 +22,10 @@ void kernel_main(void)
 	initialise_memory_manager();
 	findRSDT();
 	enable_interrupts();
+	init_ps2();
+	printhex_digits(ps2_status_byte, 8);
+	println();
+	while (1)
+	{
+	}
 }

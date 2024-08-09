@@ -1,5 +1,6 @@
 #include "sys/interrupts.h"
 #include "sys/debug.h"
+#include "sys/keyboard.h"
 
 #define IDT_MAX_DESCRIPTORS 256
 
@@ -106,6 +107,9 @@ void enable_interrupts()
 
     for (int i = 32 + 8; i < 32 + 16; i++)
         idt_set_descriptor(i, empty_irq_pic_2, 0x8E);
+
+    idt_set_descriptor(33, keyboard_interrupt, 0x8E);
+    idt_set_descriptor(34, exception_handler, 0x8E);
 
     setup_idt();
 }

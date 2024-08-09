@@ -11,6 +11,9 @@
         "interrupts.h": "c",
         "cstdint": "c",
         "vector": "c",
-        "iosfwd": "c"
+        "iosfwd": "c",
+        "acpi.h": "c",
+        "ps2.h": "c",
+        "keyboard.h": "c"
     }
 }

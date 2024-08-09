@@ -67,7 +67,7 @@ struct RSDT *findRSDT()
 {
     struct XSDP_t *xsdp = findRSDP();
     if (xsdp == NULL)
-        kernel_panic("There is no XSDP");
+        return NULL;
 
     rsdtPointer = (struct RSDT *)xsdp->rsdtAddr;
     return rsdtPointer;
@@ -85,6 +85,8 @@ bool doChecksum(struct ACPISDTHeader *tableHeader)
 }
 void *findTable(const char *tableID)
 {
+    if (rsdtPointer == 0)
+        return NULL;
     unsigned int entryCount = (rsdtPointer->h.length - sizeof(struct ACPISDTHeader)) / 4;
     for (unsigned int i = 0; i < entryCount; i++)
     {

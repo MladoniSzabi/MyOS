@@ -3,9 +3,9 @@
 static const size_t VGA_WIDTH = 80;
 static const size_t VGA_HEIGHT = 25;
 
-size_t terminal_row;
-size_t terminal_column;
-uint8_t terminal_color;
+volatile size_t terminal_row;
+volatile size_t terminal_column;
+volatile uint8_t terminal_color;
 volatile uint16_t *terminal_buffer;
 
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)
