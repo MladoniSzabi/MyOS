@@ -102,7 +102,7 @@ setup_gdt_loopdi_loop:
 
 	ret
 
-num_os_sectors:           db 23
+num_os_sectors:           db 54
 num_sectors:  db 5
 gdt_start:
 	;; Null descriptor

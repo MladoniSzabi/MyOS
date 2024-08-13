@@ -1,6 +1,7 @@
 #include "sys/interrupts.h"
 #include "sys/debug.h"
 #include "sys/keyboard.h"
+#include "sys/cpu_exceptions.h"
 
 #define IDT_MAX_DESCRIPTORS 256
 
@@ -26,7 +27,6 @@ volatile void (*isr_callbacks[IDT_MAX_DESCRIPTORS])();
 void __attribute__((cdecl)) exception_handler()
 {
     kernel_panic("An exception has occured.");
-    __asm__("iret");
 }
 
 void __attribute__((cdecl)) exception_handler_argument(uint32_t err_code)
@@ -34,7 +34,6 @@ void __attribute__((cdecl)) exception_handler_argument(uint32_t err_code)
     printhex(err_code);
     println();
     kernel_panic("An exception has occured.");
-    __asm__("iret");
 }
 
 void idt_set_descriptor(int vector, void *isr, uint8_t flags)
@@ -69,38 +68,38 @@ void enable_interrupts()
         idt_set_descriptor(i, exception_handler, 0x0E);
     }
 
-    idt_set_descriptor(0, exception_handler, 0x8E);
-    idt_set_descriptor(1, exception_handler, 0x8E);
-    idt_set_descriptor(2, exception_handler, 0x8E);
-    idt_set_descriptor(3, exception_handler, 0x8E);
-    idt_set_descriptor(4, exception_handler, 0x8E);
-    idt_set_descriptor(5, exception_handler, 0x8E);
-    idt_set_descriptor(6, exception_handler, 0x8E);
-    idt_set_descriptor(7, exception_handler, 0x8E);
-    idt_set_descriptor(8, exception_handler_argument, 0x8E);
-    idt_set_descriptor(9, exception_handler, 0x8E);
-    idt_set_descriptor(10, exception_handler_argument, 0x8E);
-    idt_set_descriptor(11, exception_handler_argument, 0x8E);
-    idt_set_descriptor(12, exception_handler_argument, 0x8E);
-    idt_set_descriptor(13, exception_handler_argument, 0x8E);
-    idt_set_descriptor(14, exception_handler_argument, 0x8E);
-    idt_set_descriptor(15, exception_handler, 0x8E);
-    idt_set_descriptor(16, exception_handler, 0x8E);
-    idt_set_descriptor(17, exception_handler_argument, 0x8E);
-    idt_set_descriptor(18, exception_handler, 0x8E);
-    idt_set_descriptor(19, exception_handler, 0x8E);
-    idt_set_descriptor(20, exception_handler, 0x8E);
-    idt_set_descriptor(21, exception_handler, 0x8E);
-    idt_set_descriptor(22, exception_handler, 0x8E);
-    idt_set_descriptor(23, exception_handler, 0x8E);
-    idt_set_descriptor(24, exception_handler, 0x8E);
-    idt_set_descriptor(25, exception_handler, 0x8E);
-    idt_set_descriptor(26, exception_handler, 0x8E);
-    idt_set_descriptor(27, exception_handler, 0x8E);
-    idt_set_descriptor(28, exception_handler, 0x8E);
-    idt_set_descriptor(29, exception_handler, 0x8E);
-    idt_set_descriptor(30, exception_handler_argument, 0x8E);
-    idt_set_descriptor(31, exception_handler, 0x8E);
+    idt_set_descriptor(0, cpu_exception_division_error, 0x8E);
+    idt_set_descriptor(1, cpu_exception_debug, 0x8E);
+    idt_set_descriptor(2, cpu_exception_non_maskable_interrupt, 0x8E);
+    idt_set_descriptor(3, cpu_exception_breakpoint, 0x8E);
+    idt_set_descriptor(4, cpu_exception_overflow, 0x8E);
+    idt_set_descriptor(5, cpu_exception_bound_range_exceeded, 0x8E);
+    idt_set_descriptor(6, cpu_exception_invalid_opcode, 0x8E);
+    idt_set_descriptor(7, cpu_exception_device_not_available, 0x8E);
+    idt_set_descriptor(8, cpu_exception_double_fault, 0x8E);
+    idt_set_descriptor(9, cpu_exception_coprocessor_segment_overrun, 0x8E);
+    idt_set_descriptor(10, cpu_exception_invalid_tss, 0x8E);
+    idt_set_descriptor(11, cpu_exception_segment_not_present, 0x8E);
+    idt_set_descriptor(12, cpu_exception_stack_segment_fault, 0x8E);
+    idt_set_descriptor(13, cpu_exception_general_protection_fault, 0x8E);
+    idt_set_descriptor(14, cpu_exception_page_fault, 0x8E);
+    idt_set_descriptor(15, cpu_exception_reserved, 0x8E);
+    idt_set_descriptor(16, cpu_exception_x87_floating_point_exception, 0x8E);
+    idt_set_descriptor(17, cpu_exception_alignment_check, 0x8E);
+    idt_set_descriptor(18, cpu_exception_machine_check, 0x8E);
+    idt_set_descriptor(19, cpu_exception_simd_floating_point_exception, 0x8E);
+    idt_set_descriptor(20, cpu_exception_virtualization_exception, 0x8E);
+    idt_set_descriptor(21, cpu_exception_control_protection_exception, 0x8E);
+    idt_set_descriptor(22, cpu_exception_reserved, 0x8E);
+    idt_set_descriptor(23, cpu_exception_reserved, 0x8E);
+    idt_set_descriptor(24, cpu_exception_reserved, 0x8E);
+    idt_set_descriptor(25, cpu_exception_reserved, 0x8E);
+    idt_set_descriptor(26, cpu_exception_reserved, 0x8E);
+    idt_set_descriptor(27, cpu_exception_reserved, 0x8E);
+    idt_set_descriptor(28, cpu_exception_hypervisor_injection_exception, 0x8E);
+    idt_set_descriptor(29, cpu_exception_vmm_communication_exception, 0x8E);
+    idt_set_descriptor(30, cpu_exception_security_exception, 0x8E);
+    idt_set_descriptor(31, cpu_exception_reserved, 0x8E);
 
     for (int i = 32; i < 32 + 8; i++)
         idt_set_descriptor(i, empty_irq_pic_1, 0x8E);

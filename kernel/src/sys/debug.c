@@ -38,5 +38,6 @@ void kernel_panic(const char *msg)
 	terminal_writestring(msg);
 	while (1)
 	{
+		__asm__("hlt");
 	}
 }

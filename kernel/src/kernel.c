@@ -3,6 +3,7 @@
 #include <sys/interrupts.h>
 #include <sys/acpi.h>
 #include <sys/ps2.h>
+#include <sys/keyboard.h>
 
 /* Check if the compiler thinks you are targeting the wrong operating system. */
 #if defined(__linux__)
@@ -23,9 +24,19 @@ void kernel_main(void)
 	findRSDT();
 	enable_interrupts();
 	init_ps2();
-	printhex_digits(ps2_status_byte, 8);
-	println();
 	while (1)
 	{
+		uint16_t keycode = process_keyboard();
+		if (keycode == 0)
+		{
+			continue;
+		}
+
+		if (!(keycode & 0x100))
+		{
+			char c = keycode_to_ascii(keycode);
+			if (c)
+				terminal_putchar(c);
+		}
 	}
 }

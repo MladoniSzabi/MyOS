@@ -1,5 +1,140 @@
 #pragma once
 
+#include "stdbool.h"
+#include <stdint.h>
+
+#define KEYCODE_ESCAPE 1
+#define KEYCODE_KEY_ONE 2
+#define KEYCODE_KEY_TWO 3
+#define KEYCODE_KEY_THREE 4
+#define KEYCODE_KEY_FOUR 5
+#define KEYCODE_KEY_FIVE 6
+#define KEYCODE_KEY_SIX 7
+#define KEYCODE_KEY_SEVEN 8
+#define KEYCODE_KEY_EIGHT 9
+#define KEYCODE_KEY_NINE 10
+#define KEYCODE_KEY_ZERO 11
+#define KEYCODE_DASH 12
+#define KEYCODE_EQUAL 13
+#define KEYCODE_BACKSPACE 14
+#define KEYCODE_TAB 15
+#define KEYCODE_KEY_Q 16
+#define KEYCODE_KEY_W 17
+#define KEYCODE_KEY_E 18
+#define KEYCODE_KEY_R 19
+#define KEYCODE_KEY_T 20
+#define KEYCODE_KEY_Y 21
+#define KEYCODE_KEY_U 22
+#define KEYCODE_KEY_I 23
+#define KEYCODE_KEY_O 24
+#define KEYCODE_KEY_P 25
+#define KEYCODE_SQUARE_BRACKET_OPEN 26
+#define KEYCODE_SQUARE_BRACKET_CLOSE 27
+#define KEYCODE_ENTER 28
+#define KEYCODE_LEFT_CONTROL 29
+#define KEYCODE_KEY_A 30
+#define KEYCODE_KEY_S 31
+#define KEYCODE_KEY_D 32
+#define KEYCODE_KEY_F 33
+#define KEYCODE_KEY_G 34
+#define KEYCODE_KEY_H 35
+#define KEYCODE_KEY_J 36
+#define KEYCODE_KEY_K 37
+#define KEYCODE_KEY_L 38
+#define KEYCODE_SEMICOLON 39
+#define KEYCODE_SINGLE_QUOTE 40
+#define KEYCODE_BACK_TICK 41
+#define KEYCODE_LEFT_SHIFT 42
+#define KEYCODE_BACKSLASH 43
+#define KEYCODE_KEY_Z 44
+#define KEYCODE_KEY_X 45
+#define KEYCODE_KEY_C 46
+#define KEYCODE_KEY_V 47
+#define KEYCODE_KEY_B 48
+#define KEYCODE_KEY_N 49
+#define KEYCODE_KEY_M 50
+#define KEYCODE_COMMA 51
+#define KEYCODE_PERIOD 52
+#define KEYCODE_SLASH 53
+#define KEYCODE_RIGHT_SHIFT 54
+#define KEYCODE_KP_MUL 55
+#define KEYCODE_LEFT_ALT 56
+#define KEYCODE_SPACE 57
+#define KEYCODE_CAPS_LOCK 58
+#define KEYCODE_F1 59
+#define KEYCODE_F2 60
+#define KEYCODE_F3 61
+#define KEYCODE_F4 62
+#define KEYCODE_F5 63
+#define KEYCODE_F6 64
+#define KEYCODE_F7 65
+#define KEYCODE_F8 66
+#define KEYCODE_F9 67
+#define KEYCODE_F10 68
+#define KEYCODE_NUM_LOCK 69
+#define KEYCODE_SCROLL_LOCK 70
+#define KEYCODE_KP_7 71
+#define KEYCODE_KP_8 72
+#define KEYCODE_KP_9 73
+#define KEYCODE_KP_DASH 74
+#define KEYCODE_KP_4 75
+#define KEYCODE_KP_5 76
+#define KEYCODE_KP_6 77
+#define KEYCODE_KP_PLUS 78
+#define KEYCODE_KP_1 79
+#define KEYCODE_KP_2 80
+#define KEYCODE_KP_3 81
+#define KEYCODE_KP_0 82
+#define KEYCODE_KP_PERIOD 83
+#define KEYCODE_F11 84
+#define KEYCODE_F12 85
+
+#define KEYCODE_PREV_TRACK 86
+#define KEYCODE_NEXT_TRACK 87
+#define KEYCODE_KP_ENTER 88
+#define KEYCODE_RIGHT_CONTROL 89
+#define KEYCODE_MUTE 90
+#define KEYCODE_CALCULATOR 91
+#define KEYCODE_PLAY 92
+#define KEYCODE_STOP 93
+#define KEYCODE_VOLUME_DOWN 94
+#define KEYCODE_VOLUME_UP 95
+#define KEYCODE_WWW_HOME 96
+#define KEYCODE_KP_SLASH 97
+#define KEYCODE_RIGHT_ALT 98
+#define KEYCODE_HOME 99
+#define KEYCODE_CURSOR_UP 100
+#define KEYCODE_CURSOR_LEFT 101
+#define KEYCODE_CURSOR_RIGHT 102
+#define KEYCODE_END 103
+#define KEYCODE_CURSOR_DOWN 104
+#define KEYCODE_PAGE_DOWN 105
+#define KEYCODE_INSERT 106
+#define KEYCODE_DELETE 107
+#define KEYCODE_LEFT_GUI 108
+#define KEYCODE_RIGHT_GUI 109
+#define KEYCODE_APPS 110
+#define KEYCODE_ACPI_POWER 111
+#define KEYCODE_ACPI_SLEEP 112
+#define KEYCODE_ACPI_WAKE 113
+#define KEYCODE_WWW_SEARCH 114
+#define KEYCODE_WWW_FAVORITES 115
+#define KEYCODE_WWW_REFRESH 116
+#define KEYCODE_WWW_STOP 117
+#define KEYCODE_WWW_FORWARD 118
+#define KEYCODE_WWW_BACK 119
+#define KEYCODE_MY_COMPUTER 120
+#define KEYCODE_EMAIL 121
+#define KEYCODE_MEDIA_SELECT 122
+#define KEYCODE_PRINTSCREEN 123
+#define KEYCODE_PAUSE 124
+
+#define KEYCODE_COUNT 125
+
+volatile extern bool is_numlock_on;
+volatile extern bool is_capslock_on;
+volatile extern bool is_scrolllock_on;
+
 void __attribute__((cdecl)) keyboard_interrupt();
-void __attribute__((cdecl)) c_keyboard_interrupt(uint16_t keycode);
-void process_keyboard();
+uint16_t process_keyboard();
+char keycode_to_ascii(uint8_t keycode);
